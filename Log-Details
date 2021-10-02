@@ -1,0 +1,60 @@
+DECLARE @eg_HTML  NVARCHAR(MAX);
+
+SET @eg_HTML =
+N'<p>Good morning, please see below for the log file details of our test databases:</p>'+
+N'<table border= "1">' + 
+   N'<tr><th>Database Name</th>'+
+   N'<th>Total Log Size (GB)</th>'+
+   N'<th>Disk Storage Used %</th>' +
+   N'<th>Used Log Space (GB)</th>'+
+   N'<th>Used Log Space %</th>'+
+   N'<th>Free Log Space (GB)</th></tr>' +
+
+ CAST (( SELECT td = 'Test_DB1', '',
+               td = CAST ((total_log_size_in_bytes/1073741824.00) AS decimal (28,2)), '',--converts the value to GB
+			         td = CAST (((total_log_size_in_bytes/53687091200)*100) AS decimal (28,2)), '',
+			         td = CAST ((used_log_space_in_bytes/1073741824.00) AS decimal (28,2)), '',
+			         td = CAST (used_log_space_in_percent AS decimal (28,2)), ' ',
+			         td = CAST (((total_log_size_in_bytes-used_log_space_in_bytes)/1073741824.00) AS decimal (28,2)), ''
+		        FROM Test_DB1.sys.dm_db_log_space_usage --the built-in SP to retrieve the log details, each database must be separate because this procedure can only retrieve the log details for one database
+	  FOR XML PATH('tr'), 
+	TYPE   
+    ) AS NVARCHAR(MAX) ) + 
+
+CAST (( SELECT td = 'Test_DB2', '',
+               td = CAST ((total_log_size_in_bytes/1073741824.00) AS decimal (28,2)), '',--converts the value to GB
+			         td = CAST (((total_log_size_in_bytes/53687091200)*100) AS decimal (28,2)), '',
+			         td = CAST ((used_log_space_in_bytes/1073741824.00) AS decimal (28,2)), '',
+			         td = CAST (used_log_space_in_percent AS decimal (28,2)), ' ',
+			         td = CAST (((total_log_size_in_bytes-used_log_space_in_bytes)/1073741824.00) AS decimal (28,2)), ''
+		        FROM Test_DB2.sys.dm_db_log_space_usage  --the built-in SP to retrieve the log details
+	  FOR XML PATH('tr'), 
+	TYPE   
+    ) AS NVARCHAR(MAX) ) +
+
+CAST (( SELECT td = 'Test_DB3', '',
+               td = CAST ((total_log_size_in_bytes/1073741824.00) AS decimal (28,2)), '',--converts the value to GB
+			         td = CAST (((total_log_size_in_bytes/53687091200)*100) AS decimal (28,2)), '',
+			         td = CAST ((used_log_space_in_bytes/1073741824.00) AS decimal (28,2)), '',
+			         td = CAST (used_log_space_in_percent AS decimal (28,2)), '',
+			         td = CAST (((total_log_size_in_bytes-used_log_space_in_bytes)/1073741824.00) AS decimal (28,2)), ''
+		        FROM Test_DB3.sys.dm_db_log_space_usage  --the built-in SP to retrieve the log details
+	  FOR XML PATH('tr'), 
+	TYPE   
+    ) AS NVARCHAR(MAX) ) +
+
++ N'</table>'
++ N'</br></br></br>'
+
++ N'<p>Kind regards,</p>'
++ N'<p>IT Department</p>';
+
+EXEC msdb.dbo.sp_send_dbmail
+@profile_name = 'SQLTest',
+@recipients = 'mytestemail@email.com',
+@subject = 'Database Log Storage Details',
+@body_format = 'HTML',
+@body = @eg_HTML, 
+@exclude_query_output = 1,
+@attach_query_result_as_file = 0,
+@append_query_error = 1
